@@ -308,6 +308,47 @@
       </div>
     </section>
 
+    <!-- Section: Retail Price & PROMOTION Master Table (ตารางราคาขายปลีกและแคมเปญโปรโมชั่น) -->
+    <section class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-rose-200/80 space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-rose-100 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold rounded-full uppercase tracking-wider">Pricing & Promotion</span>
+            <h2 class="text-xl font-bold text-slate-900">🏷️ ตารางราคาขายปลีก & แคมเปญโปรโมชั่น (แบรนด์ พญานาค 20 รายการ)</h2>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">ตารางกำหนดราคาขายปลีกหน้าร้าน (HomePro & Mega Home) พร้อมช่องข้อเสนอ PROMOTION เพื่อใช้ในการกระตุ้นยอดขายระบายสต็อก</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
+            20 รายการกำหนดราคาขาย
+          </span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left border border-slate-200 rounded-xl overflow-hidden">
+          <thead class="bg-slate-100 text-slate-700 text-xs font-semibold uppercase">
+            <tr>
+              <th class="py-3 px-3 text-center w-12">ลำดับ</th>
+              <th class="py-3 px-3">ARTNO (รหัสสินค้า)</th>
+              <th class="py-3 px-4">ชื่อรายการสินค้า (ARTDESC)</th>
+              <th class="py-3 px-3 text-right bg-indigo-50/70 text-indigo-950 font-bold">ราคาขายปกติ</th>
+              <th class="py-3 px-4 text-center bg-rose-50/70 text-rose-950 font-bold">ช่อง PROMOTION</th>
+              <th class="py-3 px-3 text-right bg-amber-50/70 text-amber-950 font-bold">ราคาโปรโมชั่น</th>
+              <th class="py-3 px-3 text-right">สต็อกคงเหลือ (ม้วน)</th>
+              <th class="py-3 px-4 text-right">มูลค่าราคาขายปกติรวม</th>
+            </tr>
+          </thead>
+          <tbody id="promoTableBody" class="divide-y divide-slate-100">
+            <!-- Dynamic Promo Master Rows -->
+          </tbody>
+          <tfoot id="promoTableFoot" class="bg-slate-100 font-bold border-t-2 border-slate-300">
+            <!-- Dynamic Promo Master Footer -->
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
     <!-- Section: Historical Sales & Q4 Clearance Plan (ย้อนหลัง & เป้าหมายก่อน 31 ธ.ค. 2026) -->
     <section class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-indigo-100 space-y-6">
       <div class="border-b border-slate-200 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -512,7 +553,7 @@
         </button>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <!-- Google Sheets Period Selector -->
         <div>
           <label class="block text-xs font-semibold text-blue-900 mb-1">งวดข้อมูล (Google Sheets)</label>
@@ -563,6 +604,18 @@
             <option value="ZERO">สต็อกเป็น 0 (Out of Stock)</option>
           </select>
         </div>
+
+        <!-- Promotion Filter -->
+        <div>
+          <label class="block text-xs font-semibold text-rose-700 mb-1">ช่อง PROMOTION</label>
+          <select id="promoFilter" onchange="applyFilters()" class="w-full text-sm px-3 py-2 border border-rose-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none bg-rose-50/40 text-rose-900 font-semibold">
+            <option value="ALL">ทุกโปรโมชั่น (All)</option>
+            <option value="HAS_PROMO">🔥 สินค้าที่มีโปรโมชั่น</option>
+            <option value="BOGO">🎁 ซื้อ 1 แถม 1</option>
+            <option value="DISCOUNT">🏷️ รายการลด % พิเศษ</option>
+            <option value="CLEARANCE">⚡ Clearance ลด 25%</option>
+          </select>
+        </div>
       </div>
     </section>
 
@@ -574,7 +627,7 @@
           <span class="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-full" id="row-count-badge">แสดง 0 รายการ</span>
         </div>
         <div class="text-xs text-slate-500 font-medium">
-          * แสดงคอลัมน์: รหัสสินค้า (ARTNO), ชื่อรายการสินค้าเต็ม (ARTDESC), ชื่อสาขาเต็ม (SITENAME), จำนวนคงเหลือ (ONHANDQTY), มูลค่าราคาเต็ม (ONHANDVALUE)
+          * แสดงคอลัมน์: รหัสสินค้า (ARTNO), ชื่อรายการสินค้าเต็ม (ARTDESC), ชื่อสาขาเต็ม (SITENAME), ราคาขายปกติ, ช่อง PROMOTION, จำนวนคงเหลือ (ONHANDQTY), มูลค่าราคาเต็ม (ONHANDVALUE)
         </div>
       </div>
 
@@ -582,12 +635,14 @@
         <table class="w-full text-left text-sm" id="stockTable">
           <thead class="bg-slate-100/80 text-slate-700 uppercase font-semibold text-xs tracking-wider border-b border-slate-200">
             <tr>
-              <th scope="col" class="py-3.5 px-4 cursor-pointer hover:bg-slate-200/70" onclick="sortTable('artno')">รหัสสินค้า (ARTNO) ⬍</th>
+              <th scope="col" class="py-3.5 px-3 cursor-pointer hover:bg-slate-200/70" onclick="sortTable('artno')">รหัสสินค้า ⬍</th>
               <th scope="col" class="py-3.5 px-4 cursor-pointer hover:bg-slate-200/70" onclick="sortTable('artdesc')">ชื่อรายการสินค้าเต็ม (ARTDESC) ⬍</th>
-              <th scope="col" class="py-3.5 px-4 cursor-pointer hover:bg-slate-200/70" onclick="sortTable('sitename')">ชื่อสาขาเต็ม (SITENAME) ⬍</th>
-              <th scope="col" class="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-200/70" onclick="sortTable('onhandqty')">จำนวนคงเหลือ (หน่วย) ⬍</th>
-              <th scope="col" class="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-200/70 bg-amber-50/50 text-slate-900" onclick="sortTable('onhandvalue')">มูลค่าราคาเต็ม (ONHANDVALUE) ⬍</th>
-              <th scope="col" class="py-3.5 px-4 text-center">สถานะ</th>
+              <th scope="col" class="py-3.5 px-3 cursor-pointer hover:bg-slate-200/70" onclick="sortTable('sitename')">ชื่อสาขาเต็ม ⬍</th>
+              <th scope="col" class="py-3.5 px-3 text-right cursor-pointer hover:bg-slate-200/70 bg-indigo-50/50 text-indigo-950 font-bold" onclick="sortTable('retailPrice')">ราคาขาย ⬍</th>
+              <th scope="col" class="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-200/70 bg-rose-50/50 text-rose-950 font-bold" onclick="sortTable('promo')">ช่อง PROMOTION ⬍</th>
+              <th scope="col" class="py-3.5 px-3 text-right cursor-pointer hover:bg-slate-200/70" onclick="sortTable('onhandqty')">จำนวนคงเหลือ ⬍</th>
+              <th scope="col" class="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-200/70 bg-amber-50/50 text-slate-900" onclick="sortTable('onhandvalue')">มูลค่าราคาเต็ม ⬍</th>
+              <th scope="col" class="py-3.5 px-3 text-center">สถานะ</th>
             </tr>
           </thead>
           <tbody id="tableBody" class="divide-y divide-slate-100">
@@ -595,8 +650,8 @@
           </tbody>
           <tfoot class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
             <tr>
-              <td colspan="3" class="py-3.5 px-4 text-right">รวมตามรายการที่เลือก (Subtotal):</td>
-              <td class="py-3.5 px-4 text-right font-mono text-indigo-900" id="table-subtotal-qty">0</td>
+              <td colspan="5" class="py-3.5 px-4 text-right">รวมตามรายการที่เลือก (Subtotal):</td>
+              <td class="py-3.5 px-3 text-right font-mono text-indigo-900" id="table-subtotal-qty">0</td>
               <td class="py-3.5 px-4 text-right font-mono text-emerald-800 bg-amber-100/60" id="table-subtotal-val">฿0.00</td>
               <td></td>
             </tr>
