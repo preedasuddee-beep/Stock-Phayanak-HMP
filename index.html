@@ -308,19 +308,19 @@
       </div>
     </section>
 
-    <!-- Section: Retail Price Master Table (ตารางราคาขายปลีก) -->
+    <!-- Section: Retail Price & Promotion Table (ตารางราคาขายปลีก & สินค้าจัดโปรโมชั่น) -->
     <section class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-indigo-200/80 space-y-4">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-indigo-100 pb-4">
         <div>
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full uppercase tracking-wider">Retail Pricing</span>
-            <h2 class="text-xl font-bold text-slate-900">🏷️ ตารางราคาขายปลีก (แบรนด์ พญานาค 20 รายการ)</h2>
+            <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full uppercase tracking-wider">Promotion 1 แถม 1</span>
+            <h2 class="text-xl font-bold text-slate-900">🏷️ สรุปตารางราคาขายปลีก & สินค้าจัดโปรโมชั่น แบรนด์ พญานาค (20 รายการ)</h2>
           </div>
-          <p class="text-xs text-slate-500 mt-1">ตารางกำหนดราคาขายปลีกหน้าร้าน (HomePro & Mega Home) สำหรับสินค้าบรรจุสำเร็จ 20 รายการ พร้อมสรุปมูลค่าสต็อกตามราคาขาย</p>
+          <p class="text-xs text-slate-500 mt-1">ตารางกำหนดราคาขายปลีกและแคมเปญโปรโมชั่น ซื้อ 1 แถม 1 แบรนด์ พญานาค สำหรับสินค้าบรรจุสำเร็จ 20 รายการ</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg">
-            20 รายการกำหนดราคาขาย
+          <span class="text-xs font-semibold px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg">
+            🎁 จัดโปรโมชั่น ซื้อ 1 แถม 1 (20 รายการ)
           </span>
         </div>
       </div>
@@ -332,9 +332,9 @@
               <th class="py-3 px-3 text-center w-12">ลำดับ</th>
               <th class="py-3 px-3">ARTNO (รหัสสินค้า)</th>
               <th class="py-3 px-4">ชื่อรายการสินค้า (ARTDESC)</th>
-              <th class="py-3 px-3 text-right bg-indigo-50/70 text-indigo-950 font-bold">ราคาขาย (บาท)</th>
-              <th class="py-3 px-3 text-right">สต็อกคงเหลือ (ม้วน)</th>
-              <th class="py-3 px-4 text-right bg-emerald-50/70 text-emerald-950 font-bold">มูลค่าราคาขายรวม (บาท)</th>
+              <th class="py-3 px-4 text-right bg-indigo-50/70 text-indigo-950 font-bold">ราคาขายปกติ (บาท)</th>
+              <th class="py-3 px-4 text-center bg-emerald-50/70 text-emerald-950 font-bold">โปรโมชั่น</th>
+              <th class="py-3 px-4 text-right bg-amber-50/70 text-amber-950 font-bold">ราคาเฉลี่ยต่อม้วน (บาท)</th>
             </tr>
           </thead>
           <tbody id="promoTableBody" class="divide-y divide-slate-100">
@@ -1491,12 +1491,6 @@
       const tfoot = document.getElementById('promoTableFoot');
       if (!tbody) return;
 
-      // Group stock data by artno to sum quantities
-      const qtyMap = {};
-      data.forEach(item => {
-        qtyMap[item.artno] = (qtyMap[item.artno] || 0) + item.onhandqty;
-      });
-
       // Product descriptions reference dictionary
       const descMap = {
         "1132525": 'สายยางเขียว 3/4" 10M. พญานาค',
@@ -1522,45 +1516,41 @@
       };
 
       // Also grab actual desc from data if available
-      data.forEach(item => {
-        if (priceMap[item.artno] && item.artdesc) {
-          descMap[item.artno] = item.artdesc;
-        }
-      });
+      if (data && Array.isArray(data)) {
+        data.forEach(item => {
+          if (priceMap[item.artno] && item.artdesc) {
+            descMap[item.artno] = item.artdesc;
+          }
+        });
+      }
 
       const priceItems = Object.keys(priceMap).map(artno => {
         const price = priceMap[artno];
-        const qty = qtyMap[artno] || 0;
-        const totalRetailVal = qty * price;
         return {
           artno,
           desc: descMap[artno] || `สินค้าแบรนด์ พญานาค รหัส ${artno}`,
           price,
-          qty,
-          totalRetailVal
+          promo: 'ซื้อ 1 แถม 1',
+          avgPrice: price / 2
         };
       });
 
-      // Sort by total retail value descending
-      priceItems.sort((a, b) => b.totalRetailVal - a.totalRetailVal);
-
       tbody.innerHTML = '';
-      let sumPriceQty = 0;
-      let sumPriceRetailVal = 0;
 
       priceItems.forEach((item, idx) => {
-        sumPriceQty += item.qty;
-        sumPriceRetailVal += item.totalRetailVal;
-
         const tr = document.createElement('tr');
         tr.className = "hover:bg-indigo-50/30 transition";
         tr.innerHTML = `
           <td class="py-3 px-3 text-center font-bold text-slate-500">${idx + 1}</td>
           <td class="py-3 px-3 font-mono font-bold text-slate-900">${item.artno}</td>
           <td class="py-3 px-4 font-semibold text-slate-800">${item.desc}</td>
-          <td class="py-3 px-3 text-right font-mono font-bold text-indigo-950 bg-indigo-50/40">฿${item.price.toLocaleString()}</td>
-          <td class="py-3 px-3 text-right font-mono font-medium">${item.qty.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
-          <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 bg-emerald-50/30">฿${item.totalRetailVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          <td class="py-3 px-4 text-right font-mono font-bold text-indigo-950 bg-indigo-50/40">฿${item.price.toLocaleString()}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+              🎁 ${item.promo}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">฿${item.avgPrice.toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -1568,9 +1558,10 @@
       if (tfoot) {
         tfoot.innerHTML = `
           <tr>
-            <td colspan="4" class="py-3.5 px-4 text-right text-slate-900">รวม 20 รายการกำหนดราคาขายปลีก:</td>
-            <td class="py-3.5 px-3 text-right font-mono text-indigo-900 font-extrabold">${sumPriceQty.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} ม้วน</td>
-            <td class="py-3.5 px-4 text-right font-mono text-emerald-800 bg-amber-100/60 text-base">฿${sumPriceRetailVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td colspan="4" class="py-3.5 px-4 text-right text-slate-800 font-bold">สรุปรายการสินค้าจัดโปรโมชั่น:</td>
+            <td colspan="2" class="py-3.5 px-4 text-emerald-800 font-extrabold text-center bg-emerald-100/50">
+              🎉 สินค้าแบรนด์ พญานาค จัดโปรโมชั่น ซื้อ 1 แถม 1 ครบทั้ง 20 รายการ
+            </td>
           </tr>
         `;
       }
