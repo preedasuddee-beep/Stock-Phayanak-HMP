@@ -21,6 +21,22 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
+  <!-- Top Notification Banner for Latest Stock 7_10_2026 -->
+  <div id="latestUpdateBanner" class="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white px-4 py-2.5 text-xs sm:text-sm font-medium flex flex-wrap items-center justify-between gap-3 shadow border-b border-emerald-500/30 no-print">
+    <div class="flex items-center gap-2">
+      <span class="text-base animate-pulse">📢</span>
+      <span><strong>อัปเดตข้อมูลล่าสุด:</strong> ไฟล์ <strong>Stock PTI 7_10_2026</strong> (งวด 07 ต.ค. 2026) พร้อมใช้งาน</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="document.getElementById('csvFileInput').click()" class="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+        <span>📂</span> <span>คลิกเลือกไฟล์ Stock PTI 7_10_2026.xls เพื่อโหลดข้อมูล</span>
+      </button>
+      <button onclick="promptCustomSheet()" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition border border-white/20">
+        <span>📋</span> <span>หรือซิงค์ชีต 6</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Top Header Navigation -->
   <header class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-lg sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -44,6 +60,9 @@
         <input type="file" id="csvFileInput" accept=".csv,.txt,.xls,.xlsx" style="display:none;" onchange="handleFileImport(event)">
         <button id="syncBtn" onclick="syncFromGoogleSheets()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 border border-blue-400 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow text-white" title="เชื่อมต่อดึงข้อมูลสดจาก Google Sheets แบบเรียลไทม์ (ไม่มีปัญหา CORS)">
           <span id="syncIcon">🔄</span> <span id="syncText">ซิงค์สด Google Sheets</span>
+        </button>
+        <button onclick="promptCustomSheet()" class="px-3.5 py-2 bg-indigo-700 hover:bg-indigo-600 border border-indigo-400 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow text-white" title="ระบุลิงก์หรือ GID ของชีต 6 เพื่อดึงข้อมูลเข้าสู่แดชบอร์ด">
+          <span>📋</span> <span>ซิงค์ชีต 6</span>
         </button>
         <button onclick="document.getElementById('csvFileInput').click()" class="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shadow text-white" title="นำเข้าไฟล์ CSV หรือ Excel (.xls, .xlsx) จากเครื่องคอมพิวเตอร์ (สำหรับใช้งานออฟไลน์ 100%)">
           <span>📂</span> <span>นำเข้าไฟล์ (CSV / Excel .xls)</span>
@@ -572,11 +591,13 @@
         <div>
           <label class="block text-xs font-semibold text-blue-900 mb-1">งวดข้อมูล (Google Sheets)</label>
           <select id="sheetSelector" autocomplete="off" onchange="switchSheet(this.value)" class="w-full text-sm px-3 py-2 border border-blue-400 bg-blue-50/50 text-blue-900 font-semibold rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="import_7_10" class="font-bold text-emerald-800 bg-emerald-50">⭐ งวดล่าสุด: 07 ต.ค. 26 (Stock PTI 7_10_2026)...</option>
             <option value="2010456650" selected>ชีต 5: 30 ก.ย. 26 (สิ้นเดือน ก.ย.)</option>
             <option value="1943525185">ชีต 4: 15 ก.ย. 26 (กลางเดือน ก.ย.)</option>
             <option value="698231691">ชีต 3: 17 ส.ค. 26 (~เดือน ส.ค.)</option>
             <option value="994023301">ชีต 2: 16 ก.ค. 26 (~เดือน ก.ค.)</option>
             <option value="0">ชีต 1: 08 มิ.ย. 26 (~เดือน มิ.ย.)</option>
+            <option value="ADD_CUSTOM">➕ ซิงค์ชีต 6 (วางลิงก์ Google Sheets / ระบุ GID)...</option>
           </select>
         </div>
 
@@ -1919,6 +1940,21 @@
 
           try {
             localStorage.setItem('cached_stock_imported_file', JSON.stringify(parsed));
+            if (file.name.includes('7_10') || detectedDate === '07/10/2026') {
+              localStorage.setItem('cached_stock_7_10_2026', JSON.stringify(parsed));
+              if (selector) {
+                let opt710 = selector.querySelector('option[value="import_7_10"]');
+                if (opt710) {
+                  opt710.textContent = `⭐ งวดล่าสุด: 07 ต.ค. 26 (${file.name})`;
+                  selector.value = 'import_7_10';
+                }
+              }
+              const banner = document.getElementById('latestUpdateBanner');
+              if (banner) {
+                banner.className = 'bg-emerald-800 text-white px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-between gap-2 shadow border-b border-emerald-400/30 no-print';
+                banner.innerHTML = `<span>✅ โหลดข้อมูลสต็อกล่าสุด <strong>${file.name}</strong> (${detectedDate}) เข้าสู่แดชบอร์ดเรียบร้อยแล้ว (${parsed.length} รายการ)</span>`;
+              }
+            }
           } catch (err) {}
           updateDashboard(rawStockData);
           showToast(`✅ นำเข้าข้อมูลสำเร็จ! โหลด ${parsed.length} รายการ จาก ${file.name}`, 'success');
@@ -1974,12 +2010,184 @@
       reader.readAsText(file, 'utf-8');
     }
 
+    // 3.1 JSONP Fetcher for Google Sheets Visualization API (Bypasses CORS 100%)
+    function fetchGoogleSheetsJSONP(gid, timeoutMs = 8000) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'gvizCallback_' + Math.floor(Math.random() * 1000000);
+        const script = document.createElement('script');
+        let timer = null;
+
+        window[callbackName] = function(data) {
+          cleanup();
+          if (data && data.table) {
+            resolve(data.table);
+          } else if (data && data.status === 'error') {
+            reject(new Error(data.errors && data.errors[0] ? data.errors[0].detailed_message : 'GViz Error'));
+          } else {
+            reject(new Error('Invalid GViz response format'));
+          }
+        };
+
+        function cleanup() {
+          if (timer) clearTimeout(timer);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        timer = setTimeout(() => {
+          cleanup();
+          reject(new Error('JSONP timeout'));
+        }, timeoutMs);
+
+        script.onerror = function() {
+          cleanup();
+          reject(new Error('JSONP script load failed'));
+        };
+
+        script.src = `${GOOGLE_SHEET_BASE}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}&t=${Date.now()}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    // 3.2 Parser for GViz Table Format
+    function parseGvizTable(table, defaultDate = '30/09/2026') {
+      if (!table || !table.cols || !table.rows) return [];
+      
+      let colNames = table.cols.map(c => (c && (c.label || c.id) ? String(c.label || c.id).trim() : ''));
+      let startRowIdx = 0;
+
+      const hasLabels = colNames.some(n => {
+        const up = n.toUpperCase();
+        return up.includes('ART') || up.includes('QTY') || up.includes('MAT') || up.includes('VAL') || up.includes('PERIOD');
+      });
+
+      if (!hasLabels && table.rows.length > 0) {
+        const r0 = table.rows[0];
+        const r0Names = r0.c ? r0.c.map(cell => cell && cell.v !== null && cell.v !== undefined ? String(cell.v).trim() : '') : [];
+        if (r0Names.some(n => {
+          const up = n.toUpperCase();
+          return up.includes('ART') || up.includes('QTY') || up.includes('MAT') || up.includes('VAL') || up.includes('PERIOD') || up.includes('สินค้า');
+        })) {
+          colNames = r0Names;
+          startRowIdx = 1;
+        }
+      }
+
+      let perioddateIdx = -1, artnoIdx = -1, artdescIdx = -1, sitenoIdx = -1, sitenameIdx = -1, onhandqtyIdx = -1, onhandvalueIdx = -1;
+      colNames.forEach((col, idx) => {
+        const c = String(col || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+        if (c.includes('PERIODDATE') || c.includes('CRDATE') || c.includes('DOCDATE') || c.includes('วันที่')) perioddateIdx = idx;
+        else if (c.includes('ARTNO') || c.includes('ARTICLE') || c.includes('MATERIAL') || c.includes('รหัสสินค้า') || c.includes('SKU')) artnoIdx = idx;
+        else if (c.includes('ARTDESC') || c.includes('DESCRIPTION') || c.includes('MAKTX') || c.includes('ชื่อสินค้า') || c.includes('รายการ')) artdescIdx = idx;
+        else if (c.includes('SITENO') || c.includes('STORENO') || c.includes('PLANT') || c.includes('รหัสสาขา') || c.includes('สาขา')) sitenoIdx = idx;
+        else if (c.includes('SITENAME') || c.includes('STORENAME') || c.includes('PLANTNAME') || c.includes('ชื่อสาขา')) sitenameIdx = idx;
+        else if (c.includes('ONHANDQTY') || c.includes('STOCKQTY') || c.includes('LABST') || c.includes('QTY') || c.includes('จำนวน')) onhandqtyIdx = idx;
+        else if (c.includes('ONHANDVALUE') || c.includes('STOCKVAL') || c.includes('SALESVAL') || c.includes('VAL') || c.includes('มูลค่า')) onhandvalueIdx = idx;
+      });
+
+      if (artnoIdx === -1 && table.cols.length >= 6) {
+        perioddateIdx = 0; artnoIdx = 1; artdescIdx = 2; sitenameIdx = 3; onhandqtyIdx = 4; onhandvalueIdx = 5;
+      }
+
+      const list = [];
+      for (let r = startRowIdx; r < table.rows.length; r++) {
+        const row = table.rows[r];
+        if (!row || !row.c) continue;
+
+        const getCell = (idx) => {
+          if (idx === -1 || !row.c[idx]) return '';
+          const cell = row.c[idx];
+          return cell.v !== null && cell.v !== undefined ? cell.v : (cell.f || '');
+        };
+
+        let perioddate = perioddateIdx !== -1 ? String(getCell(perioddateIdx)).trim() : defaultDate;
+        if (!perioddate) perioddate = defaultDate;
+
+        let artno = String(getCell(artnoIdx)).trim();
+        if (artno.endsWith('.0')) artno = artno.slice(0, -2);
+        const artdesc = String(getCell(artdescIdx)).trim();
+        let siteno = sitenoIdx !== -1 ? String(getCell(sitenoIdx)).trim() : '';
+        if (siteno.endsWith('.0')) siteno = siteno.slice(0, -2);
+        const sitename = sitenameIdx !== -1 ? String(getCell(sitenameIdx)).trim() : '';
+        if (!siteno) {
+          if (sitename.includes('เมกาโฮม') || sitename.startsWith('M')) siteno = 'M000';
+          else if (sitename.includes('โฮมโปร') || sitename.startsWith('S')) siteno = 'S000';
+          else if (sitename.includes('วังน้อย') || sitename.includes('คลัง') || sitename.startsWith('DC')) siteno = 'DC02';
+          else siteno = 'S000';
+        }
+
+        const qtyVal = getCell(onhandqtyIdx);
+        const valVal = onhandvalueIdx !== -1 ? getCell(onhandvalueIdx) : 0;
+        const qtyNum = typeof qtyVal === 'number' ? qtyVal : parseFloat(String(qtyVal).replace(/,/g, ''));
+        const valNum = typeof valVal === 'number' ? valVal : parseFloat(String(valVal).replace(/,/g, ''));
+
+        if (artno && (!artdesc || artdesc.includes('พญานาค')) && !isNaN(qtyNum)) {
+          list.push({
+            perioddate: perioddate,
+            artno: artno,
+            artdesc: artdesc,
+            siteno: siteno,
+            sitename: sitename,
+            onhandqty: qtyNum,
+            onhandvalue: isNaN(valNum) ? 0 : valNum
+          });
+        }
+      }
+      return list;
+    }
+
+    // 3.3 Prompt Custom Sheet (เช่น ชีต 6) Handler
+    function promptCustomSheet() {
+      const currentGid = localStorage.getItem('stock_custom_sheet_6_gid') || '';
+      const input = prompt("กรุณาระบุเลข GID หรือวางลิงก์ URL ของ 'ชีต 6' จาก Google Sheets:\n(ตัวอย่าง: https://docs.google.com/spreadsheets/d/.../edit#gid=123456789 หรือใส่เฉพาะเลข gid)", currentGid);
+      if (input === null) return;
+      
+      let gid = input.trim();
+      const m = gid.match(/[#&?]gid=([0-9]+)/);
+      if (m) gid = m[1];
+
+      if (!gid || !/^\d+$/.test(gid)) {
+        showToast('⚠️ รูปแบบ GID ไม่ถูกต้อง กรุณาระบุเฉพาะตัวเลข GID หรือวางลิงก์ชีตเต็ม', 'warning');
+        return;
+      }
+
+      try {
+        localStorage.setItem('stock_custom_sheet_6_gid', gid);
+      } catch (e) {}
+
+      const selector = document.getElementById('sheetSelector');
+      if (selector) {
+        let opt = selector.querySelector(`option[value="${gid}"]`);
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = gid;
+          selector.prepend(opt);
+        }
+        opt.textContent = `ชีต 6: อัปเดตล่าสุด (GID: ${gid})`;
+        selector.value = gid;
+      }
+
+      const sheetLinks = document.querySelectorAll('header a[href*="docs.google.com"]');
+      sheetLinks.forEach(link => {
+        link.href = `${GOOGLE_SHEET_BASE}/edit?gid=${gid}#gid=${gid}`;
+        link.innerHTML = `📊 เปิดชีตต้นฉบับ (ชีต 6 - GID ${gid})`;
+      });
+
+      showToast(`⏳ กำลังเชื่อมต่อซิงค์ข้อมูลชีต 6 (GID: ${gid})...`, 'info');
+      syncFromGoogleSheets();
+    }
+
     // 4. Multi-Tier Live Sync Function
     async function syncFromGoogleSheets() {
       const syncBtn = document.getElementById('syncBtn');
       const syncIcon = document.getElementById('syncIcon');
       const syncText = document.getElementById('syncText');
       const gid = document.getElementById('sheetSelector') ? document.getElementById('sheetSelector').value : '2010456650';
+
+      if (gid === 'ADD_CUSTOM') {
+        promptCustomSheet();
+        return;
+      }
 
       if (syncIcon) syncIcon.className = "inline-block animate-spin";
       if (syncText) syncText.innerText = "กำลังซิงค์...";
@@ -1993,6 +2201,10 @@
           if (parsed && parsed.length > 0) {
             rawStockData = parsed;
             try { localStorage.setItem('cached_stock_' + gid, JSON.stringify(parsed)); } catch (e) {}
+            if (parsed[0] && parsed[0].perioddate) {
+              const badgeEl = document.querySelector('header span.text-blue-200');
+              if (badgeEl) badgeEl.textContent = `อัปเดตล่าสุด: ${parsed[0].perioddate} (ซิงค์สด Google Sheets)`;
+            }
             updateDashboard(rawStockData);
             showToast(`✅ ซิงค์สดสำเร็จ! ดึงข้อมูลตรงจาก Google Sheets สำเร็จ (${rawStockData.length} รายการ)`, 'success');
             return;
@@ -2021,6 +2233,10 @@
               if (parsed && parsed.length > 0) {
                 rawStockData = parsed;
                 try { localStorage.setItem('cached_stock_' + gid, JSON.stringify(parsed)); } catch (e) {}
+                if (parsed[0] && parsed[0].perioddate) {
+                  const badgeEl = document.querySelector('header span.text-blue-200');
+                  if (badgeEl) badgeEl.textContent = `อัปเดตล่าสุด: ${parsed[0].perioddate} (ซิงค์สด Google Sheets)`;
+                }
                 updateDashboard(rawStockData);
                 showToast(`✅ ซิงค์สดสำเร็จ! โหลดข้อมูล ${rawStockData.length} รายการเรียบร้อยแล้ว`, 'success');
                 return;
@@ -2046,7 +2262,7 @@
         }
 
         // Tier 4: Offline fallback - embedded dataset
-        if (embeddedSheets && embeddedSheets[gid]) {
+        if (typeof embeddedSheets !== 'undefined' && embeddedSheets && embeddedSheets[gid]) {
           rawStockData = embeddedSheets[gid];
           updateDashboard(rawStockData);
           showToast(`ℹ️ ใช้งานโหมดออฟไลน์: แสดงข้อมูลสำรองประจำงวดที่บันทึกไว้ (${rawStockData.length} รายการ)`, 'info');
@@ -2067,6 +2283,39 @@
 
     // 5. Switch Sheet Period Handler
     async function switchSheet(gid) {
+      if (gid === 'import_7_10') {
+        const cached710 = localStorage.getItem('cached_stock_7_10_2026');
+        if (cached710) {
+          try {
+            const parsed710 = JSON.parse(cached710);
+            if (Array.isArray(parsed710) && parsed710.length > 0) {
+              rawStockData = parsed710;
+              const badgeEl = document.querySelector('header span.text-blue-200');
+              if (badgeEl) badgeEl.textContent = 'อัปเดตล่าสุด: 07 ตุลาคม 2026 (Stock PTI 7_10_2026)';
+              updateDashboard(rawStockData);
+              showToast(`✅ แสดงผลข้อมูลงวดล่าสุด 07 ต.ค. 2026 (${rawStockData.length} รายการ)`, 'success');
+              return;
+            }
+          } catch (e) {}
+        }
+        document.getElementById('csvFileInput').click();
+        return;
+      }
+      if (gid === 'ADD_CUSTOM') {
+        promptCustomSheet();
+        return;
+      }
+      if (gid === 'imported_file') {
+        const cached = localStorage.getItem('cached_stock_imported_file');
+        if (cached) {
+          try {
+            rawStockData = JSON.parse(cached);
+            updateDashboard(rawStockData);
+            showToast(`✅ แสดงผลข้อมูลจากไฟล์นำเข้าล่าสุด (${rawStockData.length} รายการ)`, 'success');
+            return;
+          } catch(e) {}
+        }
+      }
       if (gid === '2010456650') {
         rawStockData = sheet5Data;
         updateDashboard(rawStockData);
@@ -2085,7 +2334,7 @@
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].perioddate) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             rawStockData = parsed;
             updateDashboard(rawStockData);
             showToast(`✅ สลับข้อมูลสำเร็จ: แสดงผล Sheet GID: ${gid} (${rawStockData.length} รายการ)`, 'success');
@@ -2094,13 +2343,55 @@
         } catch (e) {}
       }
 
-      if (embeddedSheets && embeddedSheets[gid]) {
+      if (typeof embeddedSheets !== 'undefined' && embeddedSheets && embeddedSheets[gid]) {
         rawStockData = embeddedSheets[gid];
         updateDashboard(rawStockData);
         showToast(`✅ สลับข้อมูลสำเร็จ: แสดงผล Sheet GID: ${gid} (${rawStockData.length} รายการ)`, 'success');
         return;
       }
       await syncFromGoogleSheets();
+    }
+
+    // 5.1 Auto-Load Local Stock PTI 7_10_2026 file if available on server
+    async function tryAutoLoadLocalExcel() {
+      const candidateFiles = ['Stock PTI 7_10_2026.xls', 'Stock_PTI_7_10_2026.csv', 'Stock PTI 7_10_2026.csv'];
+      for (const f of candidateFiles) {
+        try {
+          const resp = await fetch(encodeURI(f));
+          if (resp.ok) {
+            if (f.endsWith('.xls') || f.endsWith('.xlsx')) {
+              if (typeof XLSX === 'undefined') continue;
+              const buf = await resp.arrayBuffer();
+              const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+              for (const s of wb.SheetNames) {
+                const csv = XLSX.utils.sheet_to_csv(wb.Sheets[s]);
+                const parsed = parseGoogleSheetCSV(csv, '07/10/2026');
+                if (parsed && parsed.length > 0) {
+                  rawStockData = parsed;
+                  try { localStorage.setItem('cached_stock_7_10_2026', JSON.stringify(parsed)); } catch (e) {}
+                  const selector = document.getElementById('sheetSelector');
+                  if (selector) {
+                    let opt = selector.querySelector('option[value="import_7_10"]');
+                    if (opt) opt.textContent = `⭐ งวดล่าสุด: 07 ต.ค. 26 (${f})`;
+                    selector.value = 'import_7_10';
+                  }
+                  const badgeEl = document.querySelector('header span.text-blue-200');
+                  if (badgeEl) badgeEl.textContent = `อัปเดตล่าสุด: 07 ตุลาคม 2026 (จากไฟล์ ${f})`;
+                  const banner = document.getElementById('latestUpdateBanner');
+                  if (banner) {
+                    banner.className = 'bg-emerald-800 text-white px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-between gap-2 shadow border-b border-emerald-400/30 no-print';
+                    banner.innerHTML = `<span>✅ โหลดข้อมูลอัตโนมัติจาก <strong>${f}</strong> (07/10/2026) เรียบร้อยแล้ว (${parsed.length} รายการ)</span>`;
+                  }
+                  updateDashboard(rawStockData);
+                  showToast(`✅ โหลดข้อมูลอัตโนมัติจาก ${f} (7 ต.ค. 2026) สำเร็จ! (${parsed.length} รายการ)`, 'success');
+                  return true;
+                }
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      return false;
     }
 
     // 6. Non-Intrusive Notification Toast
@@ -2128,7 +2419,7 @@
     // Initialize Dashboard
     window.addEventListener('DOMContentLoaded', () => {
       // 1. Version enforcement & stale cache eviction
-      const APP_VERSION = "2026-09-30_v5_final";
+      const APP_VERSION = "2026-10-07_v7";
       try {
         const lastVer = localStorage.getItem('stock_app_ver');
         if (lastVer !== APP_VERSION) {
@@ -2138,19 +2429,71 @@
         }
       } catch (e) {}
 
-      // 2. Explicitly force dropdown selector to Sheet 5
       const selector = document.getElementById('sheetSelector');
+
+      // 2. Load saved custom sheet 6 if present
+      const savedGid = localStorage.getItem('stock_custom_sheet_6_gid');
+      if (savedGid && selector) {
+        let opt = selector.querySelector(`option[value="${savedGid}"]`);
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = savedGid;
+          opt.textContent = `ชีต 6: อัปเดตล่าสุด (GID: ${savedGid})`;
+          selector.prepend(opt);
+        }
+      }
+
+      // 3. Boot with 7 ต.ค. 2026 if cached
+      const cached710 = localStorage.getItem('cached_stock_7_10_2026');
+      if (cached710) {
+        try {
+          const parsed710 = JSON.parse(cached710);
+          if (Array.isArray(parsed710) && parsed710.length > 0) {
+            if (selector) selector.value = 'import_7_10';
+            rawStockData = parsed710;
+            const badgeEl = document.querySelector('header span.text-blue-200');
+            if (badgeEl) badgeEl.textContent = 'อัปเดตล่าสุด: 07 ตุลาคม 2026 (Stock PTI 7_10_2026)';
+            const banner = document.getElementById('latestUpdateBanner');
+            if (banner) {
+              banner.className = 'bg-emerald-800 text-white px-4 py-2 text-xs sm:text-sm font-medium flex items-center justify-between gap-2 shadow border-b border-emerald-400/30 no-print';
+              banner.innerHTML = `<span>✅ ข้อมูลสต็อกล่าสุด: <strong>07 ต.ค. 2026 (Stock PTI 7_10_2026)</strong> พร้อมแสดงผล (${parsed710.length} รายการ)</span>`;
+            }
+            updateDashboard(rawStockData);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // 4. Boot with Sheet 6 if cached, else default to Sheet 5
+      if (savedGid) {
+        const cached6 = localStorage.getItem('cached_stock_' + savedGid);
+        if (cached6) {
+          try {
+            const parsed6 = JSON.parse(cached6);
+            if (Array.isArray(parsed6) && parsed6.length > 0) {
+              if (selector) selector.value = savedGid;
+              rawStockData = parsed6;
+              updateDashboard(rawStockData);
+              return;
+            }
+          } catch(e) {}
+        }
+      }
+
       if (selector) {
         selector.value = '2010456650';
       }
 
-      // 3. Always boot with 30 ก.ย. 2026 (Sheet 5) data
+      // Always boot with 30 ก.ย. 2026 (Sheet 5) data by default
       rawStockData = sheet5Data;
       try {
         localStorage.setItem('cached_stock_2010456650', JSON.stringify(sheet5Data));
       } catch (e) {}
 
       updateDashboard(rawStockData);
+
+      // Attempt background auto-load of local 7_10 file if web server allows
+      tryAutoLoadLocalExcel();
     });
   </script>
 </body>
