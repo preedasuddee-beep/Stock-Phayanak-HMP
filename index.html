@@ -1819,24 +1819,24 @@
       return lines;
     }
 
-    function parseGoogleSheetCSV(text) {
+    function parseGoogleSheetCSV(text, defaultDate = '30/09/2026') {
       const rows = parseCSV(text);
       if (rows.length < 2) return [];
 
       let artnoIdx = -1, artdescIdx = -1, sitenoIdx = -1, sitenameIdx = -1, onhandqtyIdx = -1, onhandvalueIdx = -1, perioddateIdx = -1;
       let headerRowIdx = -1;
 
-      for (let r = 0; r < Math.min(10, rows.length); r++) {
+      for (let r = 0; r < Math.min(30, rows.length); r++) {
         const row = rows[r];
         row.forEach((col, idx) => {
-          const c = col.trim().toUpperCase();
-          if (c.includes('PERIODDATE')) perioddateIdx = idx;
-          else if (c.includes('ARTNO')) artnoIdx = idx;
-          else if (c.includes('ARTDESC')) artdescIdx = idx;
-          else if (c.includes('SITENO')) sitenoIdx = idx;
-          else if (c.includes('SITENAME')) sitenameIdx = idx;
-          else if (c.includes('ONHANDQTY')) onhandqtyIdx = idx;
-          else if (c.includes('ONHANDVALUE')) onhandvalueIdx = idx;
+          const c = String(col || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+          if (c.includes('PERIODDATE') || c.includes('CRDATE') || c.includes('DOCDATE') || c.includes('วันที่')) perioddateIdx = idx;
+          else if (c.includes('ARTNO') || c.includes('ARTICLE') || c.includes('MATERIAL') || c.includes('รหัสสินค้า') || c.includes('SKU')) artnoIdx = idx;
+          else if (c.includes('ARTDESC') || c.includes('DESCRIPTION') || c.includes('MAKTX') || c.includes('ชื่อสินค้า') || c.includes('รายการ')) artdescIdx = idx;
+          else if (c.includes('SITENO') || c.includes('STORENO') || c.includes('PLANT') || c.includes('รหัสสาขา') || c.includes('สาขา')) sitenoIdx = idx;
+          else if (c.includes('SITENAME') || c.includes('STORENAME') || c.includes('PLANTNAME') || c.includes('ชื่อสาขา')) sitenameIdx = idx;
+          else if (c.includes('ONHANDQTY') || c.includes('STOCKQTY') || c.includes('LABST') || c.includes('QTY') || c.includes('จำนวน')) onhandqtyIdx = idx;
+          else if (c.includes('ONHANDVALUE') || c.includes('STOCKVAL') || c.includes('SALESVAL') || c.includes('VAL') || c.includes('มูลค่า')) onhandvalueIdx = idx;
         });
         if (artnoIdx !== -1 && (artdescIdx !== -1 || sitenameIdx !== -1) && onhandqtyIdx !== -1) {
           headerRowIdx = r;
@@ -1849,531 +1849,33 @@
       const list = [];
       for (let r = headerRowIdx + 1; r < rows.length; r++) {
         const row = rows[r];
-        let perioddate = perioddateIdx !== -1 ? (row[perioddateIdx] || '').trim() : '30/09/2026';
-        let artno = (row[artnoIdx] || '').trim();
+        let perioddate = perioddateIdx !== -1 ? String(row[perioddateIdx] || '').trim() : defaultDate;
+        if (!perioddate) perioddate = defaultDate;
+
+        let artno = String(row[artnoIdx] || '').trim();
         if (artno.endsWith('.0')) artno = artno.slice(0, -2);
-        const artdesc = (row[artdescIdx] || '').trim();
-        let siteno = sitenoIdx !== -1 ? (row[sitenoIdx] || '').trim() : '';
+        const artdesc = String(row[artdescIdx] || '').trim();
+        let siteno = sitenoIdx !== -1 ? String(row[sitenoIdx] || '').trim() : '';
         if (siteno.endsWith('.0')) siteno = siteno.slice(0, -2);
-        const sitename = sitenameIdx !== -1 ? (row[sitenameIdx] || '').trim() : '';
+        const sitename = sitenameIdx !== -1 ? String(row[sitenameIdx] || '').trim() : '';
         if (!siteno) {
           if (sitename.includes('เมกาโฮม') || sitename.startsWith('M')) siteno = 'M000';
           else if (sitename.includes('โฮมโปร') || sitename.startsWith('S')) siteno = 'S000';
           else if (sitename.includes('วังน้อย') || sitename.includes('คลัง') || sitename.startsWith('DC')) siteno = 'DC02';
           else siteno = 'S000';
         }
-        const qtyStr = (row[onhandqtyIdx] || '').replace(/,/g, '').trim();
-        const valStr = onhandvalueIdx !== -1 ? (row[onhandvalueIdx] || '').replace(/,/g, '').trim() : '0';
+        const qtyStr = String(row[onhandqtyIdx] || '').replace(/,/g, '').trim();
+        const valStr = onhandvalueIdx !== -1 ? String(row[onhandvalueIdx] || '').replace(/,/g, '').trim() : '0';
 
         if (artno && (!artdesc || artdesc.includes('พญานาค')) && !isNaN(parseFloat(qtyStr))) {
           list.push({
-            perioddate: perioddate || '30/09/2026',
+            perioddate: perioddate,
             artno: artno,
             artdesc: artdesc,
             siteno: siteno,
             sitename: sitename,
             onhandqty: parseFloat(qtyStr),
             onhandvalue: parseFloat(valStr) || 0
-          });
-        }
-      }
-      return list;
-    }
-
-    function renderTop10(data) {
-      const tbody = document.getElementById('top10Tbody');
-      if (!tbody) return;
-
-      const skuMap = {};
-      data.forEach(item => {
-        if (!skuMap[item.artno]) {
-          skuMap[item.artno] = {
-            artno: item.artno,
-            artdesc: item.artdesc,
-            qty: 0,
-            val: 0
-          };
-        }
-        skuMap[item.artno].qty += item.onhandqty;
-        skuMap[item.artno].val += item.onhandvalue;
-      });
-
-      const totalStockVal = data.reduce((s, x) => s + x.onhandvalue, 0);
-      const sortedSkus = Object.values(skuMap).sort((a, b) => b.val - a.val);
-      const top10 = sortedSkus.slice(0, 10);
-      const others = sortedSkus.slice(10);
-
-      const top10Val = top10.reduce((s, x) => s + x.val, 0);
-      const top10Qty = top10.reduce((s, x) => s + x.qty, 0);
-      const top10Pct = totalStockVal > 0 ? (top10Val / totalStockVal) * 100 : 0;
-
-      const othersVal = others.reduce((s, x) => s + x.val, 0);
-      const othersQty = others.reduce((s, x) => s + x.qty, 0);
-      const othersPct = totalStockVal > 0 ? (othersVal / totalStockVal) * 100 : 0;
-
-      const summaryText = document.getElementById('top10SummaryText');
-      if (summaryText) {
-        summaryText.innerHTML = `10 รายการนี้ครองมูลค่ารวม <strong>฿${top10Val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${top10Pct.toFixed(1)}%)</strong> ของสต็อกทั้งหมด ควรเน้นทำแคมเปญระบายสต็อกในกลุ่มนี้เป็นอันดับแรก`;
-      }
-      const badge = document.getElementById('top10SubtotalBadge');
-      if (badge) {
-        badge.innerText = `มูลค่ารวม Top 10: ฿${Math.round(top10Val).toLocaleString()} (${top10Pct.toFixed(1)}%)`;
-      }
-
-      tbody.innerHTML = '';
-      const medals = ['🥇 1', '🥈 2', '🥉 3'];
-      const priorityBadges = [
-        '<span class="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-bold rounded">ทุนจมสูงสุด</span>',
-        '<span class="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-bold rounded">ทุนจมสูง</span>',
-        '<span class="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs font-semibold rounded">ระบายด่วน</span>',
-        '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded">ขนาดมาตรฐาน</span>',
-        '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded">ปริมาณมากสุด</span>',
-        '<span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded">เกษตร/สูบน้ำ</span>',
-        '<span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded">งานช่าง/เกษตร</span>',
-        '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded">ขนาดใช้ในบ้าน</span>',
-        '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs font-semibold rounded">เกรดพรีเมียม</span>',
-        '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded">เขียวขายดี</span>'
-      ];
-
-      top10.forEach((item, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = idx === 0 ? "hover:bg-amber-50/30 bg-amber-50/10 transition" : "hover:bg-slate-50 transition";
-        const rankLabel = idx < 3 ? medals[idx] : `${idx + 1}`;
-        const rankColor = idx === 0 ? "text-amber-600 font-bold" : (idx === 1 ? "text-slate-500 font-bold" : (idx === 2 ? "text-amber-700 font-bold" : "text-slate-400 font-medium"));
-        const pct = totalStockVal > 0 ? ((item.val / totalStockVal) * 100).toFixed(2) : '0.00';
-        const badgeHtml = priorityBadges[idx] || '<span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded">ทั่วไป</span>';
-
-        tr.innerHTML = `
-          <td class="py-3 px-4 text-center ${rankColor}">${rankLabel}</td>
-          <td class="py-3 px-4 font-mono font-bold text-slate-900">${item.artno}</td>
-          <td class="py-3 px-4 font-semibold text-slate-800">${item.artdesc}</td>
-          <td class="py-3 px-4 text-right font-mono font-medium">${item.qty.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}</td>
-          <td class="py-3 px-4 text-right font-mono font-bold text-blue-900 bg-amber-50/50">฿${item.val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          <td class="py-3 px-4 text-center font-mono font-semibold text-indigo-700">${pct}%</td>
-          <td class="py-3 px-4 text-center">${badgeHtml}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      const tfoot = document.getElementById('top10Tfoot');
-      if (tfoot) {
-        tfoot.innerHTML = `
-          <tr>
-            <td colspan="3" class="py-3.5 px-4 text-right text-slate-900">รวม 10 อันดับสูงสุด (Top 10 Subtotal):</td>
-            <td class="py-3.5 px-4 text-right font-mono text-indigo-900">${top10Qty.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} ม้วน</td>
-            <td class="py-3.5 px-4 text-right font-mono text-emerald-800 bg-amber-100/60 text-base">฿${top10Val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="py-3.5 px-4 text-center font-mono text-indigo-900 font-extrabold">${top10Pct.toFixed(2)}%</td>
-            <td class="py-3.5 px-4 text-center text-xs text-slate-500">ครอง ${top10Pct.toFixed(1)}% ของสต็อก</td>
-          </tr>
-          <tr class="text-xs text-slate-600 bg-slate-50">
-            <td colspan="3" class="py-2.5 px-4 text-right">รายการอื่นๆ ที่เหลือ ${others.length} SKUs:</td>
-            <td class="py-2.5 px-4 text-right font-mono">${othersQty.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} ม้วน</td>
-            <td class="py-2.5 px-4 text-right font-mono font-semibold">฿${othersVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="py-2.5 px-4 text-center font-mono">${othersPct.toFixed(2)}%</td>
-            <td></td>
-          </tr>
-        `;
-      }
-    }
-
-    function renderPriceMaster(data) {
-      const tbody = document.getElementById('promoTableBody');
-      const tfoot = document.getElementById('promoTableFoot');
-      if (!tbody) return;
-
-      // Product descriptions reference dictionary
-      const descMap = {
-        "1132525": 'สายยางเขียว 3/4" 10M. พญานาค',
-        "1132574": 'สายยางเขียว 1" 20M. พญานาค',
-        "1132553": 'สายยางใส 3/4" 10M. พญานาค',
-        "1133267": 'สายยางเขียว 1/2" 10M. พญานาค',
-        "1132552": 'สายยางใส 5/8" 10M. พญานาค',
-        "1132849": 'สายยางเขียว 5/8" 20M. พญานาค',
-        "1132473": 'สายยางเขียว 5/8" 10M. พญานาค',
-        "1132573": 'สายยางเขียว 3/4" 15M. พญานาค',
-        "1155961": 'สายยางเด้ง PVC ฟ้ามัน พญานาค 3/4"x10M',
-        "1155877": 'สายยางเด้ง PVC ฟ้ามัน พญานาค 1"x20M',
-        "1155951": 'สายยางเด้ง PVC ฟ้ามัน พญานาค 5/8"x10M',
-        "1155903": 'สายยางเด้ง PVC ฟ้ามัน พญานาค 5/8"x20M',
-        "1132399": 'สายยางใส 1" 10M. พญานาค',
-        "1145498": 'สายยางใส 1" 20M. พญานาค',
-        "1132398": 'สายยางใส 1/2" 10M. พญานาค',
-        "1132493": 'สายยางใส 1/2" 20M. พญานาค',
-        "1132571": 'สายยางเขียว 1/2" 15M. พญานาค',
-        "1132505": 'สายยางเขียว 1" 15M. พญานาค',
-        "1133007": 'สายยางใส 1/2" 15M. พญานาค',
-        "1132972": 'สายยางใส 5/8" 20M. พญานาค'
-      };
-
-      // Also grab actual desc from data if available
-      if (data && Array.isArray(data)) {
-        data.forEach(item => {
-          if (priceMap[item.artno] && item.artdesc) {
-            descMap[item.artno] = item.artdesc;
-          }
-        });
-      }
-
-      const priceItems = Object.keys(priceMap).map(artno => {
-        const price = priceMap[artno];
-        return {
-          artno,
-          desc: descMap[artno] || `สินค้าแบรนด์ พญานาค รหัส ${artno}`,
-          price,
-          promo: 'ซื้อ 1 แถม 1',
-          avgPrice: price / 2
-        };
-      });
-
-      tbody.innerHTML = '';
-
-      priceItems.forEach((item, idx) => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-indigo-50/30 transition";
-        tr.innerHTML = `
-          <td class="py-3 px-3 text-center font-bold text-slate-500">${idx + 1}</td>
-          <td class="py-3 px-3 font-mono font-bold text-slate-900">${item.artno}</td>
-          <td class="py-3 px-4 font-semibold text-slate-800">${item.desc}</td>
-          <td class="py-3 px-4 text-right font-mono font-bold text-indigo-950 bg-indigo-50/40">฿${item.price.toLocaleString()}</td>
-          <td class="py-3 px-4 text-center">
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
-              🎁 ${item.promo}
-            </span>
-          </td>
-          <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700 bg-emerald-50/30">฿${item.avgPrice.toFixed(2)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      if (tfoot) {
-        tfoot.innerHTML = `
-          <tr>
-            <td colspan="4" class="py-3.5 px-4 text-right text-slate-800 font-bold">สรุปรายการสินค้าจัดโปรโมชั่น:</td>
-            <td colspan="2" class="py-3.5 px-4 text-emerald-800 font-extrabold text-center bg-emerald-100/50">
-              🎉 สินค้าแบรนด์ พญานาค จัดโปรโมชั่น ซื้อ 1 แถม 1 ครบทั้ง 20 รายการ
-            </td>
-          </tr>
-        `;
-      }
-    }
-
-    function updateCharts(data) {
-      const totalVal = data.reduce((s, x) => s + x.onhandvalue, 0);
-
-      // 1. Category Breakdown
-      let clearVal = 0, greenVal = 0, elasticVal = 0, rollVal = 0;
-      data.forEach(r => {
-        if (r.artdesc.includes('สายยางใส')) clearVal += r.onhandvalue;
-        else if (r.artdesc.includes('สายยางเขียว')) greenVal += r.onhandvalue;
-        else if (r.artdesc.includes('สายยางเด้ง')) elasticVal += r.onhandvalue;
-        else rollVal += r.onhandvalue;
-      });
-
-      const ctxCat = document.getElementById('categoryChart').getContext('2d');
-      if (categoryChartInstance) {
-        categoryChartInstance.data.datasets[0].data = [clearVal, greenVal, elasticVal, rollVal];
-        categoryChartInstance.update();
-      } else {
-        categoryChartInstance = new Chart(ctxCat, {
-          type: 'doughnut',
-          data: {
-            labels: ['สายยางใส', 'สายยางเขียว', 'สายยางเด้ง ฟ้ามัน', 'สายยางม้วน PVC'],
-            datasets: [{
-              data: [clearVal, greenVal, elasticVal, rollVal],
-              backgroundColor: ['#2563eb', '#10b981', '#0284c7', '#f59e0b'],
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'bottom', labels: { font: { family: 'Sarabun', size: 11 } } },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => ` ฿${ctx.raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${totalVal > 0 ? ((ctx.raw/totalVal)*100).toFixed(2) : 0}%)`
-                }
-              }
-            }
-          }
-        });
-      }
-
-      // 2. Branch Breakdown (Top 7 Branches)
-      const branchMap = {};
-      data.forEach(r => {
-        let branchFullName = r.sitename;
-        if (r.siteno.startsWith('S') && !branchFullName.startsWith('โฮมโปร')) {
-          branchFullName = 'โฮมโปร ' + branchFullName;
-        } else if (r.siteno.startsWith('DC') && !branchFullName.includes('คลัง')) {
-          branchFullName = 'คลังศูนย์กระจายสินค้า ' + branchFullName;
-        }
-        branchMap[branchFullName] = (branchMap[branchFullName] || 0) + r.onhandvalue;
-      });
-      const sortedBranches = Object.entries(branchMap).sort((a,b) => b[1] - a[1]).slice(0, 7);
-
-      const ctxBranch = document.getElementById('branchChart').getContext('2d');
-      if (branchChartInstance) {
-        branchChartInstance.data.labels = sortedBranches.map(b => b[0]);
-        branchChartInstance.data.datasets[0].data = sortedBranches.map(b => b[1]);
-        branchChartInstance.update();
-      } else {
-        branchChartInstance = new Chart(ctxBranch, {
-          type: 'bar',
-          data: {
-            labels: sortedBranches.map(b => b[0]),
-            datasets: [{
-              label: 'มูลค่าสต็อกราคาเต็ม (บาท)',
-              data: sortedBranches.map(b => b[1]),
-              backgroundColor: '#4f46e5',
-              borderRadius: 6
-            }]
-          },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => ` มูลค่าราคาเต็ม: ฿${ctx.raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
-                }
-              }
-            },
-            scales: {
-              x: {
-                ticks: { callback: (v) => '฿' + v.toLocaleString() }
-              }
-            }
-          }
-        });
-      }
-
-      // 3. Trend Chart
-      if (!trendChartInstance) {
-        const ctxTrend = document.getElementById('trendChart').getContext('2d');
-        trendChartInstance = new Chart(ctxTrend, {
-          type: 'line',
-          data: {
-            labels: ['8 มิ.ย. 26', '16 ก.ค. 26', '17 ส.ค. 26', '15 ก.ย. 26', '30 ก.ย. 26'],
-            datasets: [{
-              label: 'มูลค่าสต็อกราคาเต็ม (บาท)',
-              data: [1417737.42, 1238958.92, 1119305.93, 1027616.02, 898891.35],
-              borderColor: '#2563eb',
-              backgroundColor: 'rgba(37, 99, 235, 0.1)',
-              fill: true,
-              tension: 0.35,
-              pointRadius: 5,
-              pointBackgroundColor: '#1d4ed8'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => ` มูลค่าคงเหลือเต็ม: ฿${ctx.raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
-                }
-              }
-            },
-            scales: {
-              y: {
-                min: 700000,
-                ticks: { callback: (v) => '฿' + v.toLocaleString() }
-              }
-            }
-          }
-        });
-      }
-    }
-
-    function updateDashboard(data) {
-      const totalVal = data.reduce((s, x) => s + x.onhandvalue, 0);
-      const totalQty = data.reduce((s, x) => s + x.onhandqty, 0);
-      const activeSkus = new Set(data.map(x => x.artno)).size;
-      const activeSites = new Set(data.map(x => x.sitename ? x.sitename.trim() : x.siteno)).size;
-      const negItems = data.filter(x => x.onhandqty < 0);
-      const posQty = data.filter(x => x.onhandqty > 0).reduce((s, x) => s + x.onhandqty, 0);
-      const negVal = negItems.reduce((s, x) => s + x.onhandvalue, 0);
-
-      document.getElementById('kpi-total-val').innerText = '฿' + totalVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      document.getElementById('kpi-total-qty').innerText = Math.round(totalQty).toLocaleString();
-      document.getElementById('kpi-total-sku').innerText = activeSkus;
-      document.getElementById('kpi-total-sites').innerText = activeSites;
-      document.getElementById('kpi-neg-count').innerText = negItems.length;
-
-      const availEl = document.getElementById('kpi-available-qty');
-      if (availEl) {
-        availEl.innerText = `${Math.round(posQty).toLocaleString()} ม้วน (฿${(totalVal - negVal).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})})`;
-      }
-      const negValEl = document.getElementById('kpi-neg-val');
-      if (negValEl) {
-        negValEl.innerText = (negVal < 0 ? '-' : '') + '฿' + Math.abs(negVal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      }
-
-      const decEl = document.getElementById('kpi-decrease-subtext');
-      if (decEl) {
-        const decPct = ((1417737.42 - totalVal) / 1417737.42) * 100;
-        const diffVal = 1417737.42 - totalVal;
-        decEl.innerHTML = `<span class="text-emerald-600 font-semibold flex items-center gap-1">📉 ลดลง ${decPct.toFixed(2)}%</span><span class="ml-1">(-฿${diffVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}) จาก มิ.ย.</span>`;
-      }
-
-      renderTop10(data);
-      renderPriceMaster(data);
-      updateCharts(data);
-      applyFilters();
-    }
-
-    // ----------------------------------------------------
-    // Robust Multi-Tier Google Sheets Sync & File Import
-    // ----------------------------------------------------
-
-    // 1. JSONP Loader (Bypasses browser CORS policy 100%, works on file:/// protocol)
-    function fetchGoogleSheetsJSONP(gid) {
-      return new Promise((resolve, reject) => {
-        const callbackName = 'gvizCallback_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-        const script = document.createElement('script');
-        let timer = null;
-
-        window[callbackName] = function(json) {
-          cleanup();
-          if (json && json.status === 'ok' && json.table) {
-            resolve(json.table);
-          } else if (json && json.errors && json.errors.length > 0) {
-            reject(new Error(json.errors[0]?.message || 'Google Sheets API error'));
-          } else {
-            reject(new Error('Invalid Google Sheets response structure'));
-          }
-        };
-
-        function cleanup() {
-          if (timer) clearTimeout(timer);
-          try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
-          if (script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        script.onerror = function() {
-          cleanup();
-          reject(new Error('JSONP network or script loading error'));
-        };
-
-        timer = setTimeout(() => {
-          cleanup();
-          reject(new Error('JSONP request timed out (7s)'));
-        }, 7000);
-
-        script.src = `${GOOGLE_SHEET_BASE}/gviz/tq?gid=${gid}&tqx=responseHandler:${callbackName}&t=${Date.now()}`;
-        document.head.appendChild(script);
-      });
-    }
-
-    // 2. Parser for Google Sheets GViz Table
-    function parseGvizTable(table) {
-      if (!table || !table.rows || !Array.isArray(table.rows)) return [];
-
-      let artnoIdx = -1, artdescIdx = -1, sitenoIdx = -1, sitenameIdx = -1, onhandqtyIdx = -1, onhandvalueIdx = -1, perioddateIdx = -1;
-      let startRow = 0;
-
-      // Check table.cols labels
-      if (table.cols && Array.isArray(table.cols)) {
-        table.cols.forEach((col, idx) => {
-          const lbl = String(col.label || '').trim().toUpperCase();
-          if (lbl.includes('PERIODDATE')) perioddateIdx = idx;
-          else if (lbl.includes('ARTNO')) artnoIdx = idx;
-          else if (lbl.includes('ARTDESC')) artdescIdx = idx;
-          else if (lbl.includes('SITENO')) sitenoIdx = idx;
-          else if (lbl.includes('SITENAME')) sitenameIdx = idx;
-          else if (lbl.includes('ONHANDQTY')) onhandqtyIdx = idx;
-          else if (lbl.includes('ONHANDVALUE')) onhandvalueIdx = idx;
-        });
-      }
-
-      // If not in cols label, scan first 5 rows for column header cells
-      if (artnoIdx === -1 || onhandqtyIdx === -1) {
-        for (let r = 0; r < Math.min(5, table.rows.length); r++) {
-          const row = table.rows[r];
-          if (!row || !row.c) continue;
-          row.c.forEach((cell, idx) => {
-            if (!cell) return;
-            const val = String(cell.v !== undefined ? cell.v : (cell.f || '')).trim().toUpperCase();
-            if (val.includes('PERIODDATE')) perioddateIdx = idx;
-            else if (val.includes('ARTNO')) artnoIdx = idx;
-            else if (val.includes('ARTDESC')) artdescIdx = idx;
-            else if (val.includes('SITENO')) sitenoIdx = idx;
-            else if (val.includes('SITENAME')) sitenameIdx = idx;
-            else if (val.includes('ONHANDQTY')) onhandqtyIdx = idx;
-            else if (val.includes('ONHANDVALUE')) onhandvalueIdx = idx;
-          });
-          if (artnoIdx !== -1 && onhandqtyIdx !== -1) {
-            startRow = r + 1;
-            break;
-          }
-        }
-      }
-
-      // Fallback column order:
-      // Standard Sheet 5 layout: PERIODDATE (0), ARTNO (1), ARTDESC (2), SITENAME (3), ONHANDQTY (4), ONHANDVALUE (5)
-      if (artnoIdx === -1 || onhandqtyIdx === -1) {
-        if (table.cols && table.cols.length >= 6) {
-          perioddateIdx = 0;
-          artnoIdx = 1;
-          artdescIdx = 2;
-          sitenameIdx = 3;
-          onhandqtyIdx = 4;
-          onhandvalueIdx = 5;
-        } else {
-          return [];
-        }
-      }
-
-      const list = [];
-      for (let r = startRow; r < table.rows.length; r++) {
-        const row = table.rows[r];
-        if (!row || !row.c) continue;
-
-        const getCellVal = (idx) => {
-          if (idx < 0 || !row.c || !row.c[idx]) return '';
-          const cell = row.c[idx];
-          if (cell.v !== null && cell.v !== undefined) return cell.v;
-          if (cell.f !== null && cell.f !== undefined) return cell.f;
-          return '';
-        };
-
-        let perioddate = perioddateIdx !== -1 ? String(getCellVal(perioddateIdx)).trim() : '30/09/2026';
-        let artno = String(getCellVal(artnoIdx)).trim();
-        if (artno.endsWith('.0')) artno = artno.slice(0, -2);
-
-        const artdesc = artdescIdx !== -1 ? String(getCellVal(artdescIdx)).trim() : '';
-        let siteno = sitenoIdx !== -1 ? String(getCellVal(sitenoIdx)).trim() : '';
-        if (siteno.endsWith('.0')) siteno = siteno.slice(0, -2);
-        const sitename = sitenameIdx !== -1 ? String(getCellVal(sitenameIdx)).trim() : '';
-        if (!siteno) {
-          if (sitename.includes('เมกาโฮม') || sitename.startsWith('M')) siteno = 'M000';
-          else if (sitename.includes('โฮมโปร') || sitename.startsWith('S')) siteno = 'S000';
-          else if (sitename.includes('วังน้อย') || sitename.includes('คลัง') || sitename.startsWith('DC')) siteno = 'DC02';
-          else siteno = 'S000';
-        }
-
-        const rawQty = getCellVal(onhandqtyIdx);
-        const rawVal = onhandvalueIdx !== -1 ? getCellVal(onhandvalueIdx) : 0;
-
-        let qty = typeof rawQty === 'number' ? rawQty : parseFloat(String(rawQty).replace(/,/g, '').trim());
-        let val = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/,/g, '').trim());
-
-        if (isNaN(val)) val = 0;
-
-        if (artno && (!artdesc || artdesc.includes('พญานาค')) && !isNaN(qty)) {
-          list.push({
-            perioddate: perioddate || '30/09/2026',
-            artno: artno,
-            artdesc: artdesc,
-            siteno: siteno,
-            sitename: sitename,
-            onhandqty: qty,
-            onhandvalue: val
           });
         }
       }
@@ -2388,27 +1890,57 @@
       const fileName = file.name.toLowerCase();
       const isExcel = fileName.endsWith('.xls') || fileName.endsWith('.xlsx');
 
+      // Auto-detect date from file name (e.g. Stock PTI 7_10_2026.xls -> 07/10/2026)
+      let detectedDate = '07/10/2026';
+      const mDate = file.name.match(/(\d{1,2})[_.-](\d{1,2})[_.-](\d{4})/);
+      if (mDate) {
+        detectedDate = `${mDate[1].padStart(2, '0')}/${mDate[2].padStart(2, '0')}/${mDate[3]}`;
+      }
+
+      const onDataParsed = (parsed) => {
+        if (parsed && parsed.length > 0) {
+          rawStockData = parsed;
+          const selector = document.getElementById('sheetSelector');
+          if (selector) {
+            let opt = selector.querySelector('option[value="imported_file"]');
+            if (!opt) {
+              opt = document.createElement('option');
+              opt.value = 'imported_file';
+              selector.prepend(opt);
+            }
+            opt.textContent = `📁 ไฟล์นำเข้าล่าสุด: ${file.name} (${detectedDate})`;
+            selector.value = 'imported_file';
+          }
+
+          const badgeEl = document.querySelector('header span.text-blue-200');
+          if (badgeEl) {
+            badgeEl.textContent = `อัปเดตล่าสุด: ${detectedDate} (จากไฟล์ ${file.name})`;
+          }
+
+          try {
+            localStorage.setItem('cached_stock_imported_file', JSON.stringify(parsed));
+          } catch (err) {}
+          updateDashboard(rawStockData);
+          showToast(`✅ นำเข้าข้อมูลสำเร็จ! โหลด ${parsed.length} รายการ จาก ${file.name}`, 'success');
+        } else {
+          showToast('⚠️ ไม่พบรายการสินค้าแบรนด์ พญานาค ในไฟล์ที่เลือก โปรดตรวจสอบแผ่นงานและหัวตาราง', 'warning');
+        }
+      };
+
       if (isExcel && typeof XLSX !== 'undefined') {
         const reader = new FileReader();
         reader.onload = function(e) {
           try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const csvText = XLSX.utils.sheet_to_csv(worksheet);
-            const parsed = parseGoogleSheetCSV(csvText);
-            if (parsed && parsed.length > 0) {
-              rawStockData = parsed;
-              const gid = document.getElementById('sheetSelector') ? document.getElementById('sheetSelector').value : 'custom';
-              try {
-                localStorage.setItem('cached_stock_' + gid, JSON.stringify(parsed));
-              } catch (err) {}
-              updateDashboard(rawStockData);
-              showToast(`✅ นำเข้าไฟล์ Excel สำเร็จ! อัปเดตข้อมูล ${parsed.length} รายการ (${file.name})`, 'success');
-            } else {
-              showToast('⚠️ ไม่พบรายการสินค้าแบรนด์ พญานาค ในไฟล์ Excel ที่เลือก โปรดตรวจสอบแผ่นงานและหัวตาราง', 'warning');
+            let parsed = [];
+            for (const sheetName of workbook.SheetNames) {
+              const worksheet = workbook.Sheets[sheetName];
+              const csvText = XLSX.utils.sheet_to_csv(worksheet);
+              parsed = parseGoogleSheetCSV(csvText, detectedDate);
+              if (parsed && parsed.length > 0) break;
             }
+            onDataParsed(parsed);
           } catch (err) {
             console.error(err);
             showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์ Excel: ' + err.message, 'warning');
@@ -2427,18 +1959,8 @@
       reader.onload = function(e) {
         try {
           const text = e.target.result;
-          const parsed = parseGoogleSheetCSV(text);
-          if (parsed && parsed.length > 0) {
-            rawStockData = parsed;
-            const gid = document.getElementById('sheetSelector') ? document.getElementById('sheetSelector').value : 'custom';
-            try {
-              localStorage.setItem('cached_stock_' + gid, JSON.stringify(parsed));
-            } catch (err) {}
-            updateDashboard(rawStockData);
-            showToast(`✅ นำเข้าไฟล์ CSV สำเร็จ! อัปเดตข้อมูล ${parsed.length} รายการ (${file.name})`, 'success');
-          } else {
-            showToast('⚠️ ไม่พบรายการสินค้าแบรนด์ พญานาค ในไฟล์ CSV ที่เลือก โปรดตรวจสอบหัวตารางและเนื้อหาไฟล์', 'warning');
-          }
+          const parsed = parseGoogleSheetCSV(text, detectedDate);
+          onDataParsed(parsed);
         } catch (err) {
           console.error(err);
           showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์ CSV: ' + err.message, 'warning');
